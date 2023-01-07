@@ -1,4 +1,4 @@
-# Kraken: Edge Computing and Data Analytics Software
+# Kraken: IoT and Edge Computing Software
 
 ![Kraken Logo](https://github.com/highboi/kraken/blob/master/kraken_logo_blue.png)
 
