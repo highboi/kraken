@@ -1,5 +1,7 @@
+from scapy.all import *
 import socket
 import json
+
 
 #an array to store ip/port tuples for communication
 peers = []
@@ -56,22 +58,52 @@ def writeData(key, value):
 initData()
 
 '''
-CODE FOR SOCKET SIGNALLING AND IP/PORT EXCHANGE
+CODE FOR CONNECTING TO SOCKET PEERS
 '''
 
-#a function to process recieved data
+#a function to see if a host is active on a port or not
+def scanHost(host, port):
+	#make a socket and set the timeout to 2 seconds
+	s = socket.socket()
+	s.settimeout(2)
 
-#a function to send responses to a socket peer/server
+	#try connecting to the ip/port pair and return true or false based on the connection working
+	try:
+		s.connect((host, port))
+		return True
+	except socket.error as e:
+		return False
+	finally:
+		s.close()
 
-#start interaction with a peer or host
-def socketStart(host, port):
-	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#a function for getting all of the active peers on a specific subnet
+def scanPeers(subnet="192.168.88.0/24"):
+	#send arp requests to the local network
+	answered, unanswered = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=subnet), timeout=2)
 
-	sock.connect((host, port))
+	#a list to store ip/port pairs of peers
+	peers = []
 
-	#make the request to join the network
-	joinObj = {"userid": userid, "event": "join-net", "attributes": attrs}
-	joinObj = json.dumps(joinObj)
+	#the port to scan for
+	peerport = 8000
 
-	#send the request to join the network and be listed among the peers
-	sock.send(bytes(joinObj, "utf-8"))
+	#loop through the peers that responded to the arp requests
+	for send, recv in answered:
+		#get the peer ip address on the local network
+		peerip = recv[ARP].psrc
+
+		#scan the host to see if it is active on the designated port
+		active = scanHost(peerip, peerport)
+
+		print("ACTIVE:", active)
+
+		#append the peer if it is actively connected to the network on the designated port
+		if active:
+			peers.append((peerip, peerport))
+
+	#return the final list of ip/port pairs of active peers on the network
+	return peers
+
+#scan peers on the network
+peers = scanPeers()
+
