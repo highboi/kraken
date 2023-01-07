@@ -1,5 +1,7 @@
+#import libraries for networking and multithreading
 from scapy.all import *
 import socket
+import threading
 import json
 
 
@@ -58,7 +60,7 @@ def writeData(key, value):
 initData()
 
 '''
-CODE FOR CONNECTING TO SOCKET PEERS
+CODE FOR COLLECTING PEERS ON THE NETWORK
 '''
 
 #a function to see if a host is active on a port or not
@@ -78,6 +80,8 @@ def scanHost(host, port):
 
 #a function for getting all of the active peers on a specific subnet
 def scanPeers(subnet="192.168.88.0/24"):
+	print("SCANNING FOR PEERS...")
+
 	#send arp requests to the local network
 	answered, unanswered = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=subnet), timeout=2)
 
@@ -95,8 +99,6 @@ def scanPeers(subnet="192.168.88.0/24"):
 		#scan the host to see if it is active on the designated port
 		active = scanHost(peerip, peerport)
 
-		print("ACTIVE:", active)
-
 		#append the peer if it is actively connected to the network on the designated port
 		if active:
 			peers.append((peerip, peerport))
@@ -106,4 +108,48 @@ def scanPeers(subnet="192.168.88.0/24"):
 
 #scan peers on the network
 peers = scanPeers()
+
+'''
+CODE FOR RUNNING A SERVER FOR OTHER PEERS TO CONNECT TO
+'''
+
+#handle peer messages from the network
+def handle_peer(peer_sock):
+	#constantly recieve data from the peer
+	while True:
+		#get data from the peer
+		data = client_sock.recv(4096)
+
+		#if the data doesn't exist, the peer broke the connection
+		if not data:
+			break
+
+		#send data back to the peer based on the data recieved
+		peer_sock.sendall(data.upper())
+
+#run the socket server to recieve messages from peers on the network
+def run_node():
+	#make a socket and bind it to this address and a specified port
+	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	sock.bind(("", 8000))
+
+	#listen for incoming connections
+	sock.listen()
+
+	print("BOOTING NODE...")
+
+	#loop to accept multiple connections
+	while True:
+		#accept a new connection from a peer on the network
+		peer_sock, peer_addr = sock.accept()
+
+		#start the thread for handling requests/responses with the peer
+		peer_thread = threading.Thread(target=handle_peer, args=(peer_sock,))
+		peer_thread.start()
+
+	#close the socket if done
+	sock.close()
+
+#boot the node on the network
+run_node()
 
