@@ -4,7 +4,6 @@ import socket
 import threading
 import json
 
-
 #an array to store ip/port tuples for communication
 peers = []
 
@@ -109,6 +108,25 @@ def scanPeers(subnet="192.168.88.0/24"):
 #scan peers on the network
 peers = scanPeers()
 
+
+'''
+CODE FOR CONNECTING TO OTHER PEERS ON THE NETWORK ON THEIR SOCKET SERVERS
+'''
+
+#make a global list of peer socket connections
+peersockets = []
+
+#check to see if there are any active peers on the network
+if (len(peers)):
+	#loop through the ip/port pairs of each peer
+	for peer in peers:
+		#connect to this peer on the local network
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		sock.connect(peer)
+
+		#add the peer to the list
+		peersockets.append(sock)
+
 '''
 CODE FOR RUNNING A SERVER FOR OTHER PEERS TO CONNECT TO
 '''
@@ -123,6 +141,38 @@ def handle_peer(peer_sock):
 		#if the data doesn't exist, the peer broke the connection
 		if not data:
 			break
+
+		#parse the data and the event associated with this
+		data = json.loads(data)
+		event = data["event"]
+
+		#create a response or perform actions based on the event
+		if (event == "relay-get"):
+			value = readData(data["key"])
+
+			if (value != None or len(data["batonholders"]) == data["echo"]):
+				valueObj = {"event": "relay-get-response", "key": data["key"], "value": value, "batonholders": data["batonholders"]}
+				valueObj = json.dumps(valueObj)
+
+				#SEND DATA BACK TO ORIGINAL REQUESTER
+			else:
+				data["batonholders"].append("a")
+
+				dataObj = {"key": data["key"], "event": "relay-get", "echo": data["echo"], "batonholders": data["batonholders"]}
+
+				#SEND DATA REQUEST TO ALL PEERS
+		elif (event == "relay-put"):
+			writeData(data["key"], data["value"])
+
+			data["batonholders"].append("a")
+
+			if (len(data["batonholders"]) < data["echo"]):
+				#RELAY THIS REQUEST TO OTHER PEERS
+				pass
+		elif (event == "relay-get-response"):
+			cache[data["key"]] = data["value"]
+
+			#SIGNAL THAT THE DATA HAS BEEN FETCHED FROM THE NETWORK
 
 		#send data back to the peer based on the data recieved
 		peer_sock.sendall(data.upper())
@@ -151,5 +201,5 @@ def run_node():
 	sock.close()
 
 #boot the node on the network
-run_node()
+#run_node()
 
