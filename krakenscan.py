@@ -7,7 +7,7 @@ CODE FOR COLLECTING PEERS ON THE NETWORK
 '''
 
 #a function to see if a host is active on a port or not
-def scanHost(host, port):
+def scan_host(host, port):
 	#make a socket and set the timeout to 2 seconds
 	s = socket.socket()
 	s.settimeout(2)
@@ -22,7 +22,7 @@ def scanHost(host, port):
 		s.close()
 
 #a function for getting all of the active peers on a specific subnet
-def scanPeers(subnet="192.168.88.0/24"):
+def scan_peers(subnet="192.168.88.0/24"):
 	print("SCANNING FOR PEERS...")
 
 	#send arp requests to the local network
@@ -40,7 +40,7 @@ def scanPeers(subnet="192.168.88.0/24"):
 		peerip = recv[ARP].psrc
 
 		#scan the host to see if it is active on the designated port
-		active = scanHost(peerip, peerport)
+		active = scan_host(peerip, peerport)
 
 		#append the peer if it is actively connected to the network on the designated port
 		if active:
@@ -50,7 +50,7 @@ def scanPeers(subnet="192.168.88.0/24"):
 	return peers
 
 #a function for connecting to a list of ip/port pairs and returning a list of socket connections
-def connectPeers(peers):
+def connect_peers(peers):
 	#a list to store the socket connections
 	peersockets = []
 
